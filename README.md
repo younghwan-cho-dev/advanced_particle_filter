@@ -50,7 +50,7 @@ conda activate pf_pf
 │   └── metrics.py                  #   OMAT, RMSE, position RMSE
 │
 ├── pfresults/                      # Saved experiment outputs (.npz, .csv)
-├── dpf_pretrained/                      # Saved pretrained model params (.h5)
+├── dpf_pretrained/                 # Saved pretrained model params (.h5)
 │
 │── 01_test_lgssm.ipynb             # KF on linear-Gaussian SSM
 │── 02_test_nonlinear_ssm.ipynb     # EKF/UKF/BPF comparison on range-bearing model
