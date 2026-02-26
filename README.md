@@ -1,100 +1,130 @@
-# PF-PF: Particle Flow Particle Filter
+# Advanced Particle Filter Library
 
-Implementation of Particle Flow Particle Filter methods for JP Morgan MLCOE interview rounds:
+A NumPy/SciPy library for Bayesian filtering in state space models, implementing classical filters, particle flow filters, and differentiable particle filters.
 
-> Kalman Filter
-> Extended Kalman Filter
-> Unscented Kalman Filter
-> Bootstrap Particle Filter
-> Li, Yunpeng, and Mark Coates (2017). "Particle filtering with invertible particle flow." 
+Developed as part of the JP Morgan MLCOE TSRL Internship (2026).
 
-This repository contains the code for the JP Morgan MLCOE TSRL 2026 internship question 2 written by Younghwan Cho.
+## Requirements
 
-## Setup
+**Core library** (CPU, all `.py` files and local notebooks):
+- Python ≥ 3.9
+- NumPy, SciPy, Matplotlib
 
-### Create conda environment
+**Differentiable PF notebooks** (GPU, Colab):
+- TensorFlow ≥ 2.12, TensorFlow Probability
+
+Install core dependencies:
+```bash
+pip install numpy scipy matplotlib
+```
+or one can install exact dependencies via environment.yaml:
 ```bash
 conda env create -f environment.yml
 conda activate pf_pf
 ```
-
 ## Project Structure
+
 ```
-pf_pf/
-├── src/                          # TensorFlow implementations
-│   ├── __init__.py
-│   ├── prob_ssm.py               # ProbSSM base class
-│   ├── utils.py                  # Utilities (resampling, metrics, plotting)
-│   │
-│   ├── models/
-│   │   └── __init__.py           # SSM model definitions (TensorFlow)
-│   │
-│   ├── filters/
-│   │   └── __init__.py           # include KF, EKF, UKF, PF (TensorFlow) (will be fully migrated to Numpy implementation)
-│   │
-│   └── flows/
-│       └── __init__.py           # EDH flow equations (TensorFlow)
+├── models/                         # State space model definitions
+│   ├── base.py                     #   StateSpaceModel dataclass
+│   ├── linear_gaussian.py          #   Linear-Gaussian SSM factory
+│   ├── range_bearing.py            #   Range-bearing with Student-t noise
+│   ├── acoustic.py                 #   Multi-target acoustic tracking (Li & Coates 2017)
+│   └── dai22_example2.py           #   Dai & Daum (2022) Example 2 model
 │
-├── src_numpy/                    # NumPy implementations
-│   ├── __init__.py
-│   ├── numpy_ssm.py              # NumpySSM base class
-│   ├── numpy_models.py           # SSM model definitions
-│   ├── numpy_pf.py               # Bootstrap particle filter
-│   ├── numpy_edh_flow.py         # EDH flow equations
-│   └── numpy_pf_edh.py           # EDH PF-PF
+├── filters/                        # Filtering algorithms
+│   ├── base.py                     #   FilterResult container
+│   ├── kalman.py                   #   KF, EKF, UKF
+│   ├── particle.py                 #   Bootstrap particle filter (SIR)
+│   ├── edh.py                      #   EDH flow + EDH PF-PF (Li & Coates 2017)
+│   ├── ledh.py                     #   LEDH flow + LEDH PF-PF
+│   ├── kernel_pff.py               #   Kernel PFF with scalar/matrix kernels (Hu & van Leeuwen 2021)
+│   ├── stochastic_pff.py           #   Stochastic PF flow + optimal homotopy BVP (Dai & Daum 2022)
+│   └── stochastic_pfpf.py          #   SPFF-PF (stochastic flow as PF-PF proposal)
 │
-├── notebooks/
-│   ├── 01_test_lgssm.ipynb       # Test LGSSM and KF
-│   ├── 02_test_nonlinear.ipynb   # Test nonlinear models
-│   ├── 03_test_edh_pfpf_paper.ipynb  # Replicate paper results
-│   ├── 03_test_edh_pfpf.ipynb    # EDH PF-PF experiments
-│   └── run_test_pf_pf_numpy.ipynb
+├── simulation/                     # Data generation
+│   └── trajectory.py               #   Trajectory container, simulate, simulate_batch
 │
-├── test_filters.py               # Unit tests (pytest)
-├── environment.yml
-└── README.md
+├── utils/                          # Shared utilities
+│   ├── resampling.py               #   Systematic, stratified, multinomial, residual resampling
+│   └── metrics.py                  #   OMAT, RMSE, position RMSE
+│
+├── pfresults/                      # Saved experiment outputs (.npz, .csv)
+├── dpf_pretrained/                      # Saved pretrained model params (.h5)
+│
+│── 01_test_lgssm.ipynb             # KF on linear-Gaussian SSM
+│── 02_test_nonlinear_ssm.ipynb     # EKF/UKF/BPF comparison on range-bearing model
+│── 03_test_Li2017_analysis.ipynb   # Replication of Li & Coates (2017) acoustic tracking
+│── 03_test_PFF_comparison.ipynb    # EDH vs LEDH vs Kernel PFF comparison
+│── 03_test_kernel_pff.ipynb        # Kernel PFF: scalar vs matrix kernel, collapse analysis
+│── 04_test_dai2022_example1_seed_sensitivity.ipynb
+│                                   # Dai & Daum (2022) Ex.1 seed sensitivity analysis
+│
+│── Differentiable_Particle_Filter.ipynb      # [Colab/GPU] Soft & OT resampling, parameter learning
+│── Sinkhorn_Parameter_Exploration.ipynb      # [Colab/GPU] OT resampling ε and K sweep
+│── Three_Model_DPF_Comparison.ipynb          # [Colab/GPU] Three-model DPF with normalizing flows
+│
+├── acoustic_experiment.py          # Script: Li & Coates (2017) replication
+├── filter_comparison.py            # Script: EDH/LEDH/Kernel PFF comparison experiments
+├── 04_test_dai2022_example1.py     # Script: Dai & Daum (2022) Example 1
+├── 04_test_dai2022_example2.py     # Script: Dai & Daum (2022) Example 2
+├── 04_test_ledh_vs_spfpf.py        # Script: LEDH PF-PF vs SPFF-PF on range-bearing
+├── dai22_example2_experiment.py    # Script: Dai & Daum (2022) Example 2 full experiment
+│
+├── test_basic.py                   # Integration tests (8-filter equivalence on LGSSM)
+├── test_filters.py                 # Unit tests (KF/EKF/UKF/PF, 22 pytest cases)
+└── test_kernel_pff.py              # Kernel PFF specific tests
 ```
 
-## Usage
+## Quick Start
 
-### Quick start
 ```python
-
-import sys
-sys.path.append('..')
-
-import numpy as np
-import tensorflow as tf
-
-
-from src_numpy import (
-    particle_filter_numpy,
-    make_random_walk_ssm_np,
+from advanced_particle_filter.models import make_lgssm
+from advanced_particle_filter.simulation import simulate
+from advanced_particle_filter.filters import (
+    KalmanFilter, ExtendedKalmanFilter, UnscentedKalmanFilter,
+    BootstrapParticleFilter, EDHParticleFilter, LEDHParticleFilter,
 )
 
-ssm = make_random_walk_ssm_np(Q=0.2, R=0.5)
-xs, ys = ssm.simulate(T=200, seed=42)
-ms, Ps, info = particle_filter_numpy(ssm, ys, num_particles=1000, seed=123)
+import numpy as np
+
+# Define a constant-velocity tracking model
+A = np.array([[1,0,1,0],[0,1,0,1],[0,0,1,0],[0,0,0,1]], dtype=float)
+C = np.array([[1,0,0,0],[0,1,0,0]], dtype=float)
+Q = 0.1 * np.eye(4)
+R = 0.5 * np.eye(2)
+m0 = np.zeros(4)
+P0 = np.eye(4)
+
+model = make_lgssm(A, C, Q, R, m0, P0)
+
+# Simulate and filter
+traj = simulate(model, T=100, seed=42)
+result = KalmanFilter().filter(model, traj.observations)
+
+print(f"Mean RMSE: {result.mean_rmse(traj.states):.4f}")
 ```
 
-## Testing
+## Design
+
+All filters operate on a shared `StateSpaceModel` dataclass that bundles dynamics, observation functions, Jacobians, noise covariances, and precomputed Cholesky factors. Filters receive this object directly and return a uniform `FilterResult` containing means, covariances, ESS, log-likelihood, and optional particle histories. This makes it possible to swap any filter on any model without changing downstream code.
+
+The filter hierarchy mirrors the literature: `EDHFlow` → `EDHParticleFilter` (adds importance weights), `LEDHFlow` → `LEDHParticleFilter` (per-particle linearization), `StochasticPFFlow` → `StochasticPFParticleFilter` (SDE-based flow as PF-PF proposal). `KernelPFF` supports both scalar and matrix-valued kernels via a flag.
+
+GPU-dependent differentiable PF work (TensorFlow/TFP) lives in self-contained Colab notebooks, keeping the core library free of TF dependencies.
+
+## Running Tests
+
 ```bash
+# Integration tests (prints results, no pytest required)
+python test_basic.py
+
+# Unit tests (requires pytest)
 pytest test_filters.py -v
 ```
 
-Tests include:
-- KF covariance convergence and validity
-- EKF/UKF equivalence to KF under linear Gaussian SSM
-- PF approximation to KF with systematic/multinomial resampling
-- Weight validity and reproducibility
+## Notebooks
 
-## Implemented Algorithms
+Local notebooks (`01_*` through `04_*`) run on CPU with the core library. They contain visualization and analysis code for the results presented in the report.
 
-| Algorithm | TensorFlow (`src/`) | NumPy (`src_numpy/`) |
-|-----------|---------------------|----------------------|
-| Kalman Filter | ✓ | |
-| Extended Kalman Filter | ✓ | |
-| Unscented Kalman Filter | ✓ | |
-| Bootstrap Particle Filter | ✓ | ✓ |
-| EDH Flow | | ✓ |
-| EDH PF-PF | | ✓ |
+Colab notebooks (`Differentiable_Particle_Filter.ipynb`, `Sinkhorn_Parameter_Exploration.ipynb`, `Three_Model_DPF_Comparison.ipynb`) require a GPU runtime and install TensorFlow Probability at the top of the notebook. They are self-contained and do not import from the core library.
